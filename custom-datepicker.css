@@ -1,0 +1,10 @@
+/* custom-datepicker.css */
+
+input[type="date"].date-white-icon::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+input[type="date"].date-white-icon {
+  color-scheme:white;
+}

@@ -1,0 +1,70 @@
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/firebase';
+import Image from 'next/image'
+import Link from 'next/link'
+import logo from '../../../image/logo/logo-princesa-da-serra.png'
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState('');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, senha);
+      router.push('/admin');
+    } catch (err) {
+      setErro('Email ou senha inválidos.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0a0b] text-white px-4">
+      <form onSubmit={handleLogin} className="bg-black p-6 rounded-lg shadow-md w-full max-w-sm">
+                {/* Logo */}
+        <div className="flex items-center justify-center pb-3">
+          <Link href="/">
+            <Image 
+              src={logo} 
+              alt="Logo Pousada Princesa da Serra" 
+              width={100} 
+              height={40} 
+              priority
+              className="object-contain"
+            />
+          </Link>
+        </div>
+        <h1 className="text-2xl font-bold mb-4 text-[#FFD675] text-center">Área do Admin</h1>
+
+        {erro && <p className="text-red-400 mb-4 text-center">{erro}</p>}
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full p-2 mb-4 rounded bg-gray-800 text-white outline-none"
+        />
+
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          required
+          className="w-full p-2 mb-4 rounded bg-gray-800 text-white outline-none"
+        />
+
+        <button type="submit" className="bg-[#FFD675] cursor-pointer text-black font-bold w-full py-2 rounded hover:brightness-110">
+          Entrar
+        </button>
+      </form>
+    </div>
+  );
+}

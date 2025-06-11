@@ -1,69 +1,67 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import '../../custom-datepicker.css' // seu CSS personalizado para datepicker
+import '../../custom-datepicker.css'
 
 export default function BuscarQuartosDisponiveis() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     checkin: '',
     checkout: '',
-    pessoas: 1,
-    criancas: 1,
-    camas: 0,
+    pessoas: '', // inicializa como string vazia
+    criancas: '',
+    camas: '',
   })
 
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsMobile(window.innerWidth < 640)
-
-      // Opcional: atualizar on resize
-      const handleResize = () => {
-        setIsMobile(window.innerWidth < 640)
-      }
-      window.addEventListener('resize', handleResize)
-      return () => window.removeEventListener('resize', handleResize)
-    }
-  }, [])
-
   const handleChange = (e) => {
-    const { name, value, type } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }))
+    const { name, value } = e.target
+
+    // Permite apenas números ou campo vazio
+    if (e.target.type === 'number') {
+      if (/^\d*$/.test(value)) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }))
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
   }
 
   const buscarQuartos = (e) => {
     e.preventDefault()
-    const { checkin, checkout, pessoas, criancas } = formData
+    const { checkin, checkout, pessoas, criancas, camas } = formData
 
-    if (checkin && checkout && new Date(checkout) <= new Date(checkin)) {
-      alert('Data de checkout deve ser posterior à data de checkin.')
+    if (!checkin || !checkout) {
+      alert('Preencha as datas.')
+      return
+    }
+
+    if (new Date(checkout) <= new Date(checkin)) {
+      alert('Data de checkout deve ser posterior ao check-in.')
       return
     }
 
     const query = new URLSearchParams({
       checkin,
       checkout,
-      pessoas: String(pessoas),
-      criancas: String(criancas),
+      pessoas: pessoas || '0',
+      criancas: criancas || '0',
+      camas: camas || '0',
     }).toString()
 
     router.push(`/quartos-disponiveis?${query}`)
   }
 
-  // Função para quando selecionar checkin, ir para checkout
   const handleCheckinChange = (e) => {
     handleChange(e)
-    // Foca no checkout após selecionar checkin
     const checkoutInput = document.getElementById('checkout')
-    if (checkoutInput) {
-      checkoutInput.focus()
-    }
+    if (checkoutInput) checkoutInput.focus()
   }
 
   return (
@@ -79,10 +77,7 @@ export default function BuscarQuartosDisponiveis() {
       >
         {/* Check-in */}
         <div className="flex flex-col col-span-1">
-          <label
-            htmlFor="checkin"
-            className="mb-2 font-semibold capitalize"
-          >
+          <label htmlFor="checkin" className="mb-2 font-semibold capitalize">
             Check-in:
           </label>
           <input
@@ -98,10 +93,7 @@ export default function BuscarQuartosDisponiveis() {
 
         {/* Check-out */}
         <div className="flex flex-col col-span-1">
-          <label
-            htmlFor="checkout"
-            className="mb-2 font-semibold capitalize"
-          >
+          <label htmlFor="checkout" className="mb-2 font-semibold capitalize">
             Check-out:
           </label>
           <input
@@ -115,12 +107,9 @@ export default function BuscarQuartosDisponiveis() {
           />
         </div>
 
-        {/* Pessoas */}
-        <div className="flex flex-col col-span-1 sm:col-span-1">
-          <label
-            htmlFor="pessoas"
-            className="mb-2 font-semibold capitalize"
-          >
+        {/* Hóspedes */}
+        <div className="flex flex-col col-span-1">
+          <label htmlFor="pessoas" className="mb-2 font-semibold capitalize">
             Hóspedes
           </label>
           <input
@@ -130,20 +119,16 @@ export default function BuscarQuartosDisponiveis() {
             min="1"
             inputMode="numeric"
             pattern="[0-9]*"
-            required
-            value={isMobile ? '' : formData.pessoas}
             placeholder="Ex: 2"
+            value={formData.pessoas}
             onChange={handleChange}
             className="bg-transparent border border-[#FFD675] rounded-md px-4 py-2 text-pousadaYellow placeholder-pousadaYellow/70 focus:outline-none focus:ring-2 focus:ring-[#FFD675] focus:border-[#FFD675] transition"
           />
         </div>
 
         {/* Camas */}
-        <div className="flex flex-col col-span-1 sm:col-span-1">
-          <label
-            htmlFor="camas"
-            className="mb-2 font-semibold capitalize"
-          >
+        <div className="flex flex-col col-span-1">
+          <label htmlFor="camas" className="mb-2 font-semibold capitalize">
             Camas
           </label>
           <input
@@ -151,9 +136,8 @@ export default function BuscarQuartosDisponiveis() {
             id="camas"
             name="camas"
             min="0"
-            required
-            value={isMobile ? '' : formData.camas}
             placeholder="Ex: 1"
+            value={formData.camas}
             onChange={handleChange}
             className="bg-transparent border border-[#FFD675] rounded-md px-4 py-2 text-pousadaYellow placeholder-pousadaYellow/70 focus:outline-none focus:ring-2 focus:ring-[#FFD675] focus:border-[#FFD675] transition"
           />

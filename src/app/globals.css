@@ -41,3 +41,21 @@ footer {
 .form-busca {
   color: #fff !important;
 }
+
+.btn-reservar {
+  background-color: #FFD675;
+}
+
+.btn-reservar:hover {
+  background-color: #e6c15f; /* cor um pouco mais escura */
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}

@@ -5,10 +5,27 @@ import { FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa'
 
 export default function Sobre() {
     const totalImages = 23
-    const imagesPerSlide = 4
-    const totalSlides = Math.ceil(totalImages / imagesPerSlide)
+
+    // Estado para definir imagesPerSlide dinamicamente
+    const [imagesPerSlide, setImagesPerSlide] = useState(4)
     const [activeSlide, setActiveSlide] = useState(0)
     const [lightboxIndex, setLightboxIndex] = useState(null)
+
+    // Atualiza imagesPerSlide conforme largura da tela (mobile: 1, desktop: 4)
+    useEffect(() => {
+        function handleResize() {
+            if (window.innerWidth < 768) {
+                setImagesPerSlide(1)
+            } else {
+                setImagesPerSlide(4)
+            }
+        }
+        handleResize() // chama na montagem
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
+    const totalSlides = Math.ceil(totalImages / imagesPerSlide)
 
     const handleDotClick = (index) => setActiveSlide(index)
     const handlePrevSlide = () => setActiveSlide((prev) => (prev === 0 ? totalSlides - 1 : prev - 1))
@@ -53,7 +70,13 @@ export default function Sobre() {
                             style={{ transform: `translateX(-${activeSlide * 100}%)` }}
                         >
                             {Array.from({ length: totalSlides }).map((_, slideIndex) => (
-                                <div key={slideIndex} className="flex-shrink-0 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+                                <div
+                                    key={slideIndex}
+                                    className={`flex-shrink-0 w-full px-2
+                                        ${imagesPerSlide === 1 
+                                            ? 'grid grid-cols-1 gap-6' 
+                                            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'}`}
+                                >
                                     {getImagesForSlide(slideIndex).map((i) => (
                                         <div
                                             key={i}
@@ -65,7 +88,7 @@ export default function Sobre() {
                                                 alt={`Foto da pousada número ${i + 1}`}
                                                 fill
                                                 className="object-cover hover:scale-105 transition-transform duration-300"
-                                                sizes="(max-width: 768px) 100vw, 25vw"
+                                                sizes={imagesPerSlide === 1 ? '100vw' : '(max-width: 768px) 50vw, 25vw'}
                                             />
                                         </div>
                                     ))}
@@ -75,23 +98,24 @@ export default function Sobre() {
                     </div>
 
                     {/* Botões laterais */}
-                    <button
-                        onClick={handlePrevSlide}
-                        className="absolute top-1/2 -translate-y-1/2 left-2 md:left-4 bg-white border border-gray-300 p-2 rounded-full shadow hover:bg-gray-100 transition"
-                        aria-label="Anterior"
-                    >
-                        <FaChevronLeft />
-                    </button>
+<button
+  onClick={handlePrevSlide}
+  className=" cursor-pointer absolute top-1/2 -translate-y-1/2 left-2 md:left-4 bg-white border border-gray-300 p-2 rounded-full shadow hover:bg-gray-100 transition"
+  aria-label="Anterior"
+>
+  <FaChevronLeft />
+</button>
+
                     <button
                         onClick={handleNextSlide}
-                        className="absolute top-1/2 -translate-y-1/2 right-2 md:right-4 bg-white border border-gray-300 p-2 rounded-full shadow hover:bg-gray-100 transition"
+                        className="cursor-pointer absolute top-1/2 -translate-y-1/2 right-2 md:right-4 bg-white border border-gray-300 p-2 rounded-full shadow hover:bg-gray-100 transition"
                         aria-label="Próximo"
                     >
                         <FaChevronRight />
                     </button>
 
                     {/* Dots */}
-                    <div className="flex justify-center mt-8 space-x-2">
+                    <div className="hidden sm:flex justify-center mt-8 space-x-2">
                         {Array.from({ length: totalSlides }).map((_, index) => (
                             <button
                                 key={index}
@@ -112,13 +136,13 @@ export default function Sobre() {
                 >
 
                     <button
-                        className="absolute top-4 right-4 text-white bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90"
+                        className=" z-[9] absolute top-4 right-4 text-white bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90"
                         onClick={closeLightbox}
                     >
                         <FaTimes size={20} />
                     </button>
                     <button
-                        className="absolute left-4 text-white bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90"
+                        className="z-[9] absolute left-4 text-white bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90"
                         onClick={(e) => { e.stopPropagation(); prevLightbox() }}
                     >
                         <FaChevronLeft size={24} />

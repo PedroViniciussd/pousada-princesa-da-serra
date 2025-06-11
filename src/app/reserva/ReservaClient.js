@@ -6,6 +6,7 @@ import { query, where, getDocs, collection, addDoc, Timestamp } from "firebase/f
 import { db } from '../../../firebase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 export default function ReservaClient() {
   const searchParams = useSearchParams()
@@ -14,6 +15,9 @@ export default function ReservaClient() {
   const checkout = searchParams.get("checkout")
   const quantidadePessoas = searchParams.get("pessoas")
   const quartosParam = searchParams.get("quartos")
+
+  const [captchaValido, setCaptchaValido] = useState(false)
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""
 
   const quartosSelecionados = useMemo(() => {
     try {
@@ -51,6 +55,11 @@ export default function ReservaClient() {
   }
 
   const handleReservar = async () => {
+    if (!captchaValido) {
+      alert("Por favor, verifique o reCAPTCHA.")
+      return
+    }
+
     try {
       const [anoCheckin, mesCheckin, diaCheckin] = checkin.split('-').map(Number)
       const [anoCheckout, mesCheckout, diaCheckout] = checkout.split('-').map(Number)
@@ -58,12 +67,11 @@ export default function ReservaClient() {
       const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12)
       const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12)
 
-      // Verificação de conflito (ajustável)
+      // Verificação de conflito (pode ser expandida se necessário)
       const reservasRef = collection(db, "reservas")
       const q = query(reservasRef, where("status", "==", "confirmado"))
-      await getDocs(q) // Pode adicionar filtro mais específico aqui
+      await getDocs(q)
 
-      // Salvar reserva
       await addDoc(collection(db, "reservas"), {
         checkin: Timestamp.fromDate(checkinDate),
         checkout: Timestamp.fromDate(checkoutDate),
@@ -78,7 +86,6 @@ export default function ReservaClient() {
         criadoEm: Timestamp.now(),
       })
 
-      // WhatsApp
       const listaQuartosTexto = quartosSelecionados
         .map(q => `- ${q.quantidade}x ${q.nome}`)
         .join('\n')
@@ -100,10 +107,9 @@ ${listaQuartosTexto}
 💰 Valor Total: R$ ${valorTotal.toFixed(2).replace(".", ",")}
       `.trim()
 
-      const telDestino = "5511934902934"
+      const telDestino = "5531984573455"
       const url = `https://wa.me/${telDestino}?text=${encodeURIComponent(mensagem)}`
       window.open(url, "_blank")
-
     } catch (error) {
       alert("Erro ao registrar reserva. Tente novamente.")
       console.error("Erro ao salvar reserva:", error)
@@ -177,10 +183,16 @@ ${listaQuartosTexto}
                 onChange={handleChange}
                 value={form.cpf}
               />
+
+              <ReCAPTCHA
+                sitekey={recaptchaSiteKey}
+                onChange={() => setCaptchaValido(true)}
+              />
+
               <button
                 type="button"
                 onClick={handleReservar}
-                className="w-full py-4 rounded-xl font-bold text-white bg-yellow-500 hover:bg-yellow-600 transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                className="btn-reservar cursor-pointer w-full py-4 rounded-xl font-bold text-black transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
               >
                 Confirmar Reserva via WhatsApp
               </button>

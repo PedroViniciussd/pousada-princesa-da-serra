@@ -75,11 +75,22 @@ export default function Footer() {
                     </div>
                 </div>
             </div>
+            
+{/* Linha inferior */}
+<div className="mt-10 border-t border-pousadaYellow/30 pt-6 text-xs text-pousadaYellow relative max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-center space-y-2 md:space-y-0">
+  
+  <span className="md:absolute md:left-1/2 md:-translate-x-1/2 whitespace-nowrap text-center md:text-left w-full md:w-auto">
+    &copy; {new Date().getFullYear()} Pousada Princesa da Serra. Todos os direitos reservados.
+  </span>
+  
+  <span className="text-pousadaYellow/70 whitespace-nowrap md:ml-auto text-center w-full md:w-auto">
+    Desenvolvido por <a href="https://pedroviniciussd.github.io/portfolio-pv/" target="_blank" rel="noopener noreferrer" className="underline hover:text-pousadaYellow">Pedro Vinícius</a>
+  </span>
+  
+</div>
 
-            {/* Linha inferior */}
-            <div className="mt-10 border-t border-pousadaYellow/30 pt-6 text-center text-xs text-pousadaYellow">
-                &copy; {new Date().getFullYear()} Pousada Princesa da Serra. Todos os direitos reservados.
-            </div>
+
+            
         </footer>
     )
 }

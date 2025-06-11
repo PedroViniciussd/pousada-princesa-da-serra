@@ -1,6 +1,7 @@
 // hooks/useQuartosDisponiveis.js
 import { useEffect, useState } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
+// Importa exatamente do seu arquivo firebase.js
 import { db } from '../../../firebase'
 
 const imagensLocais = {
@@ -38,16 +39,25 @@ export default function useQuartosDisponiveis(checkinParam, checkoutParam) {
   useEffect(() => {
     async function fetchQuartos() {
       setLoading(true)
+      setError(null)
+
+      const checkin = new Date(checkinParam)
+      const checkout = new Date(checkoutParam)
+
+      if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) {
+        setError('Datas inválidas. Por favor, selecione datas corretas.')
+        setLoading(false)
+        return
+      }
+
+      checkin.setHours(12, 0, 0, 0)
+      checkout.setHours(12, 0, 0, 0)
+
       try {
         const [quartosSnap, reservasSnap] = await Promise.all([
           getDocs(collection(db, 'quartos')),
           getDocs(collection(db, 'reservas')),
         ])
-
-        const checkin = new Date(checkinParam)
-        checkin.setHours(12, 0, 0, 0)
-        const checkout = new Date(checkoutParam)
-        checkout.setHours(12, 0, 0, 0)
 
         const quartosList = quartosSnap.docs.map(d => ({
           id: d.id,
@@ -61,13 +71,18 @@ export default function useQuartosDisponiveis(checkinParam, checkoutParam) {
         }))
 
         const reservasConflitantes = {}
+
         reservasSnap.docs.forEach(doc => {
           const data = doc.data()
-          const entrada = new Date(data.checkin?.seconds * 1000)
-          const saida = new Date(data.checkout?.seconds * 1000)
+          const entrada = data.checkin?.seconds ? new Date(data.checkin.seconds * 1000) : null
+          const saida = data.checkout?.seconds ? new Date(data.checkout.seconds * 1000) : null
           const status = (data.status || '').toLowerCase()
+
+          if (!entrada || !saida) return
+
           const conflita = checkin < saida && checkout > entrada
           if (!conflita || status !== 'confirmado') return
+
           if (Array.isArray(data.quartos)) {
             data.quartos.forEach(q => {
               const id = q.id
@@ -88,8 +103,8 @@ export default function useQuartosDisponiveis(checkinParam, checkoutParam) {
         })
 
         setQuartos(quartosAtualizados)
-        setError(null)
       } catch (err) {
+        console.error('Erro ao buscar quartos:', err)
         setError('Erro ao buscar quartos. Tente novamente.')
       } finally {
         setLoading(false)
@@ -98,6 +113,10 @@ export default function useQuartosDisponiveis(checkinParam, checkoutParam) {
 
     if (checkinParam && checkoutParam) {
       fetchQuartos()
+    } else {
+      setQuartos([])
+      setLoading(false)
+      setError(null)
     }
   }, [checkinParam, checkoutParam])
 

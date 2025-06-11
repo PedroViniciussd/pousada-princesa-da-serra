@@ -73,6 +73,16 @@ export default function Sidebar({ aba, setAba, menuAberto, setMenuAberto }) {
                             <FaQuoteRight /> Depoimentos
                         </button>
                         <button
+  onClick={() => { setAba('precificacao'); setMenuAberto(false); }}
+  className={`
+    flex items-center gap-3 cursor-pointer w-full px-4 py-2 rounded transition-colors
+    ${aba === 'precificacao' ? 'bg-[#FFD675] text-black font-semibold' : 'hover:bg-gray-800'}
+  `}
+>
+  Precificação
+</button>
+
+                        <button
                             onClick={logout}
                             className={`
                 flex items-center gap-3 cursor-pointer w-full px-4 py-2 rounded transition-colors

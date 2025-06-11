@@ -23,7 +23,7 @@ export const metadata = {
     "Pousada Princesa da Serra",
     "Quartos aconchegantes",
   ],
-  authors: [{ name: "Pedro Vinícius", url: "https://github.com/PedroViniciussd" }],
+  authors: [{ name: "Pedro Vinícius", url: "https://pedroviniciussd.github.io/portfolio-pv/" }],
   openGraph: {
     title: "Pousada Princesa da Serra",
     description:
@@ -39,12 +39,14 @@ export default function RootLayout({ children }) {
     <html lang="pt-BR">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="author" content="Pedro Vinicius - https://pedroviniciussd.github.io/portfolio-pv/" />
         <link rel="icon" href="/favicon.png" type="image/png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-white text-gray-900`}
       >
         {children}
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
       </body>
     </html>
   );

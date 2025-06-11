@@ -8,6 +8,7 @@ import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from 'fi
 import Sidebar from './components/Sidebar';
 import ReservaCard from './components/ReservaCard';
 import DepoimentoCard from './components/DepoimentoCard';
+import Precificacao from './components/Precificacao'; // Importa o componente Precificacao
 
 export default function AdminPage() {
   const router = useRouter();
@@ -126,10 +127,10 @@ export default function AdminPage() {
                   onChange={(e) => setTipoReserva(e.target.value)}
                   className="w-full p-2 rounded text-black font-semibold"
                 >
-                  <option  value="atuais">Reservas Atuais</option>
-                  <option  value="futuras">Reservas Futuras</option>
-                  <option  value="encerradas">Reservas Encerradas</option>
-                  <option  value="canceladas">Reservas Canceladas</option>
+                  <option value="atuais">Reservas Atuais</option>
+                  <option value="futuras">Reservas Futuras</option>
+                  <option value="encerradas">Reservas Encerradas</option>
+                  <option value="canceladas">Reservas Canceladas</option>
                 </select>
               </div>
             </div>
@@ -154,6 +155,8 @@ export default function AdminPage() {
             }
           </div>
         )}
+
+        {aba === 'precificacao' && <Precificacao />}
       </main>
     </div>
   );

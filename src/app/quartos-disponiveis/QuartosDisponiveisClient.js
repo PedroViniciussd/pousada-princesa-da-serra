@@ -34,7 +34,7 @@ export default function QuartosDisponiveisClient() {
   )
 
   // Pode reservar se pelo menos 1 pessoa e o total de camas atender ao pedido
-  const podeReservar = totalPessoas >= pessoasParam && totalCamas >= camasParam
+const podeReservar = totalPessoas >= pessoasParam && totalCamas >= camasParam
 
   const reservarAgora = () => {
     const quartosSelecionados = Object.entries(selecionado)

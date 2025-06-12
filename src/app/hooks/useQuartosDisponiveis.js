@@ -1,7 +1,7 @@
 // hooks/useQuartosDisponiveis.js
 import { useEffect, useState } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
-// Importa exatamente do seu arquivo firebase.js
+
 import { db } from '../../../firebase'
 
 const imagensLocais = {

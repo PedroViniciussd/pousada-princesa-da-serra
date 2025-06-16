@@ -79,7 +79,7 @@ export default function Sidebar({ aba, setAba, menuAberto, setMenuAberto }) {
     ${aba === 'precificacao' ? 'bg-[#FFD675] text-black font-semibold' : 'hover:bg-gray-800'}
   `}
 >
-  Precificação
+  Preço dos quartos
 </button>
 
                         <button

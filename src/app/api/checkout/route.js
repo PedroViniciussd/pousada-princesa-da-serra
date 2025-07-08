@@ -6,7 +6,15 @@ export async function POST(req) {
 
     const { nome, email, cpf, valorTotal, formaPagamento, referenceId } = body;
 
-    const response = await fetch("https://sandbox.api.pagseguro.com/orders", {
+    // Por enquanto, só tratamos o PIX
+    if (formaPagamento !== "pix") {
+      return NextResponse.json(
+        { error: "Apenas pagamento via PIX está disponível no momento." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch("https://sandbox.api.pagseguro.com/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -19,6 +27,7 @@ export async function POST(req) {
           email: email,
           tax_id: cpf.replace(/\D/g, ""),
         },
+        customer_modifiable: true,
         items: [
           {
             name: "Reserva na pousada",
@@ -26,52 +35,34 @@ export async function POST(req) {
             unit_amount: Math.round(valorTotal * 100),
           },
         ],
-        charges: [
+        payment_methods: [
           {
-            payment_method: {
-              type:
-                formaPagamento === "pix"
-                  ? "PIX"
-                  : formaPagamento === "credito"
-                  ? "CREDIT_CARD"
-                  : "DEBIT_CARD",
-            },
+            type: "PIX",
           },
         ],
-        notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
+        notification_urls: [
+          `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`
+        ],
+        payment_notification_urls: [
+          `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`
+        ],
+        return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reserva?success=true`
       }),
     });
 
     const data = await response.json();
 
-    // Mostra o erro real para você ver no frontend:
     if (!response.ok) {
-      return NextResponse.json({
-        error: "Erro na resposta do PagSeguro",
-        detalhes: data,
-      }, { status: response.status });
+      return NextResponse.json(
+        { error: "Erro na resposta do PagSeguro", detalhes: data },
+        { status: response.status }
+      );
     }
 
-    // Se for PIX
-    if (data?.charges?.[0]?.payment_method?.type === "PIX") {
-      return NextResponse.json({
-        qr_code: data.charges[0].payment_method.qr_code_url,
-        reference_id: referenceId,
-      });
-    }
-
-    // Outros métodos (cartão)
-    const redirectUrl =
-      data?.checkout_url || data?.charges?.[0]?.payment_method?.redirect_url;
-
-    if (redirectUrl) {
-      return NextResponse.json({ url: redirectUrl, reference_id: referenceId });
-    }
-
-    return NextResponse.json(
-      { error: "Resposta inesperada do PagSeguro", detalhes: data },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      url: data.checkout_url,
+      reference_id: referenceId,
+    });
   } catch (err) {
     console.error("Erro ao criar pagamento:", err);
     return NextResponse.json(

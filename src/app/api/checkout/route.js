@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
-  const body = await req.json();
-
-  const { nome, email, cpf, valorTotal, formaPagamento, referenceId } = body;
-
   try {
+    const body = await req.json();
+
+    const { nome, email, cpf, valorTotal, formaPagamento, referenceId } = body;
+
     const response = await fetch("https://sandbox.api.pagseguro.com/orders", {
       method: "POST",
       headers: {
@@ -43,7 +43,16 @@ export async function POST(req) {
     });
 
     const data = await response.json();
+    console.log("Resposta PagSeguro:", JSON.stringify(data, null, 2));
 
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data?.message || "Erro na resposta do PagSeguro" },
+        { status: response.status }
+      );
+    }
+
+    // Se for PIX, retorna o QR code
     if (data?.charges?.[0]?.payment_method?.type === "PIX") {
       return NextResponse.json({
         qr_code: data.charges[0].payment_method.qr_code_url,
@@ -51,10 +60,20 @@ export async function POST(req) {
       });
     }
 
+    // Para outros métodos, tenta pegar a URL de checkout para redirecionar
     const redirectUrl =
       data?.checkout_url || data?.charges?.[0]?.payment_method?.redirect_url;
 
-    return NextResponse.json({ url: redirectUrl, reference_id: referenceId });
+    if (redirectUrl) {
+      return NextResponse.json({ url: redirectUrl, reference_id: referenceId });
+    }
+
+    // Caso nenhum dos casos anteriores ocorra, retorno erro
+    console.error("Resposta inesperada do PagSeguro:", data);
+    return NextResponse.json(
+      { error: "Resposta inesperada do PagSeguro" },
+      { status: 500 }
+    );
   } catch (err) {
     console.error("Erro ao criar pagamento:", err);
     return NextResponse.json(

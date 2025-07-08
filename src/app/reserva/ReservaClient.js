@@ -73,6 +73,7 @@ export default function ReservaClient() {
   const pagamentoConfirmado = usePagamentoConfirmado(referenceId);
 
   const [formaPagamento, setFormaPagamento] = useState("pix");
+  const [parcelas, setParcelas] = useState(1);
   const [loadingPagamento, setLoadingPagamento] = useState(false);
 
   const [form, setForm] = useState({
@@ -87,7 +88,7 @@ export default function ReservaClient() {
   };
 
   const handlePagamento = async () => {
-    if (!captchaValido) {
+        if (!captchaValido) {
       alert("Por favor, verifique o reCAPTCHA.");
       return;
     }
@@ -106,9 +107,11 @@ export default function ReservaClient() {
           nome: form.nome,
           email: form.email,
           cpf: form.cpf,
-          valorTotal,
           formaPagamento,
+          parcelas: formaPagamento === "credito" ? parcelas : 1,
           referenceId,
+          quartosSelecionados,
+          dias,
         }),
       });
 
@@ -120,12 +123,12 @@ export default function ReservaClient() {
         return;
       }
 
-      if (data?.url) {
+      if (data.url) {
         window.location.href = data.url;
-      } else if (data?.qr_code) {
+      } else if (data.qr_code) {
         window.open(data.qr_code, "_blank");
       } else {
-        alert("Resposta inesperada do backend");
+        alert("Resposta inesperada do backend.");
         console.error("Resposta inesperada:", data);
       }
     } catch (error) {
@@ -138,13 +141,17 @@ export default function ReservaClient() {
 
   const handleReservar = async () => {
     if (!pagamentoConfirmado) {
-      alert("Aguarde a confirmação do pagamento para prosseguir com a reserva.");
+      alert(
+        "Aguarde a confirmação do pagamento para prosseguir com a reserva."
+      );
       return;
     }
 
     try {
       const [anoCheckin, mesCheckin, diaCheckin] = checkin.split("-").map(Number);
-      const [anoCheckout, mesCheckout, diaCheckout] = checkout.split("-").map(Number);
+      const [anoCheckout, mesCheckout, diaCheckout] = checkout
+        .split("-")
+        .map(Number);
 
       const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12);
       const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12);
@@ -294,7 +301,10 @@ ${listaQuartosTexto}
                 <select
                   className="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                   value={formaPagamento}
-                  onChange={(e) => setFormaPagamento(e.target.value)}
+                  onChange={(e) => {
+                    setFormaPagamento(e.target.value);
+                    if (e.target.value !== "credito") setParcelas(1);
+                  }}
                 >
                   <option value="pix">PIX</option>
                   <option value="credito">Cartão de Crédito</option>
@@ -302,10 +312,30 @@ ${listaQuartosTexto}
                 </select>
               </div>
 
-              <ReCAPTCHA
-                sitekey={recaptchaSiteKey}
-                onChange={() => setCaptchaValido(true)}
-              />
+                <ReCAPTCHA
+                    sitekey={recaptchaSiteKey}
+                    onChange={() => setCaptchaValido(true)}
+                />
+
+              {/* Parcelas só para cartão de crédito */}
+              {formaPagamento === "credito" && (
+                <div className="mt-4">
+                  <label className="font-semibold mb-2 block">
+                    Parcelas (máx {dias}x):
+                  </label>
+                  <select
+                    className="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                    value={parcelas}
+                    onChange={(e) => setParcelas(Number(e.target.value))}
+                  >
+                    {Array.from({ length: dias }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -313,21 +343,26 @@ ${listaQuartosTexto}
                 disabled={loadingPagamento}
                 className="btn-pagar cursor-pointer w-full py-4 rounded-xl font-bold text-white bg-yellow-500 hover:bg-yellow-600 transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
               >
-                {loadingPagamento ? "Processando..." : "Pagar Agora"}
+                {loadingPagamento ? "Processando..." : "Gerar Pagamento"}
               </button>
 
               <button
                 type="button"
-                disabled={!pagamentoConfirmado}
                 onClick={handleReservar}
-                className={`btn-reservar cursor-pointer w-full py-4 rounded-xl font-bold text-black transition duration-300 shadow-lg focus:outline-none focus:ring-2 ${
+                disabled={!pagamentoConfirmado}
+                className={`mt-4 w-full py-4 rounded-xl font-bold text-white ${
                   pagamentoConfirmado
-                    ? "focus:ring-yellow-300 bg-yellow-400"
-                    : "bg-gray-300 cursor-not-allowed"
-                }`}
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-gray-400 cursor-not-allowed"
+                } transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400`}
               >
-                Confirmar Reserva via WhatsApp
+                Finalizar Reserva
               </button>
+              {!pagamentoConfirmado && (
+                <p className="mt-2 text-sm text-red-600">
+                  Aguarde a confirmação do pagamento para finalizar.
+                </p>
+              )}
             </form>
           </div>
         </div>

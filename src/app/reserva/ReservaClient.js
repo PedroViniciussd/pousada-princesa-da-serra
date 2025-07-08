@@ -114,18 +114,23 @@ export default function ReservaClient() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        alert(data.error || "Erro ao iniciar pagamento.");
+        console.error("Resposta do backend:", data);
+        return;
+      }
+
       if (data?.url) {
-        // Redireciona para PagSeguro
         window.location.href = data.url;
       } else if (data?.qr_code) {
-        // Abre QR Code Pix em nova aba
         window.open(data.qr_code, "_blank");
       } else {
-        alert("Erro ao iniciar pagamento.");
+        alert("Resposta inesperada do backend");
+        console.error("Resposta inesperada:", data);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
       alert("Erro ao processar pagamento.");
+      console.error("Erro no handlePagamento:", error);
     } finally {
       setLoadingPagamento(false);
     }

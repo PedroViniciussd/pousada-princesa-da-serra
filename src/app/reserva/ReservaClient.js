@@ -1,76 +1,148 @@
-'use client'
+"use client";
 
-import { useSearchParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
-import { query, where, getDocs, collection, addDoc, Timestamp } from "firebase/firestore"
-import { db } from '../../../firebase'
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
-import ReCAPTCHA from 'react-google-recaptcha'
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "../../../firebase";
+import Header from "../../components/Header";
+import Footer from "../../components/Footer";
+import ReCAPTCHA from "react-google-recaptcha";
+
+function usePagamentoConfirmado(referenceId) {
+  const [confirmado, setConfirmado] = useState(false);
+
+  useEffect(() => {
+    if (!referenceId) return;
+
+    const pagamentosRef = collection(db, "pagamentosConfirmados");
+    const q = query(pagamentosRef, where("referenceId", "==", referenceId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setConfirmado(!snapshot.empty);
+    });
+
+    return () => unsubscribe();
+  }, [referenceId]);
+
+  return confirmado;
+}
 
 export default function ReservaClient() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
 
-  const checkin = searchParams.get("checkin")
-  const checkout = searchParams.get("checkout")
-  const quantidadePessoas = searchParams.get("pessoas")
-  const quartosParam = searchParams.get("quartos")
+  const checkin = searchParams.get("checkin");
+  const checkout = searchParams.get("checkout");
+  const quantidadePessoas = searchParams.get("pessoas");
+  const quartosParam = searchParams.get("quartos");
 
-  const [captchaValido, setCaptchaValido] = useState(false)
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""
+  const [captchaValido, setCaptchaValido] = useState(false);
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   const quartosSelecionados = useMemo(() => {
     try {
-      const data = JSON.parse(quartosParam)
-      return Array.isArray(data) ? data : []
+      const data = JSON.parse(quartosParam);
+      return Array.isArray(data) ? data : [];
     } catch {
-      return []
+      return [];
     }
-  }, [quartosParam])
+  }, [quartosParam]);
 
   const dias = useMemo(() => {
-    const start = new Date(checkin || "")
-    const end = new Date(checkout || "")
-    const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    return Math.max(1, diff)
-  }, [checkin, checkout])
+    const start = new Date(checkin || "");
+    const end = new Date(checkout || "");
+    const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+    return Math.max(1, diff);
+  }, [checkin, checkout]);
 
   const valorTotal = useMemo(() => {
     return quartosSelecionados.reduce((total, quarto) => {
-      const preco = parseFloat(quarto.preco) || 0
-      const quantidade = parseInt(quarto.quantidade) || 0
-      return total + preco * quantidade * dias
-    }, 0)
-  }, [quartosSelecionados, dias])
+      const preco = parseFloat(quarto.preco) || 0;
+      const quantidade = parseInt(quarto.quantidade) || 0;
+      return total + preco * quantidade * dias;
+    }, 0);
+  }, [quartosSelecionados, dias]);
+
+  const [referenceId] = useState(() => Date.now().toString());
+
+  const pagamentoConfirmado = usePagamentoConfirmado(referenceId);
+
+  const [formaPagamento, setFormaPagamento] = useState("pix");
+  const [loadingPagamento, setLoadingPagamento] = useState(false);
 
   const [form, setForm] = useState({
     nome: "",
     telefone: "",
     email: "",
     cpf: "",
-  })
+  });
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handlePagamento = async () => {
+    if (!captchaValido) {
+      alert("Por favor, verifique o reCAPTCHA.");
+      return;
+    }
+
+    if (!form.nome || !form.email || !form.cpf || !form.telefone) {
+      alert("Por favor, preencha todos os dados.");
+      return;
+    }
+
+    setLoadingPagamento(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: form.nome,
+          email: form.email,
+          cpf: form.cpf,
+          valorTotal,
+          formaPagamento,
+          referenceId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data?.url) {
+        // Redireciona para PagSeguro
+        window.location.href = data.url;
+      } else if (data?.qr_code) {
+        // Abre QR Code Pix em nova aba
+        window.open(data.qr_code, "_blank");
+      } else {
+        alert("Erro ao iniciar pagamento.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao processar pagamento.");
+    } finally {
+      setLoadingPagamento(false);
+    }
+  };
 
   const handleReservar = async () => {
-    if (!captchaValido) {
-      alert("Por favor, verifique o reCAPTCHA.")
-      return
+    if (!pagamentoConfirmado) {
+      alert("Aguarde a confirmação do pagamento para prosseguir com a reserva.");
+      return;
     }
 
     try {
-      const [anoCheckin, mesCheckin, diaCheckin] = checkin.split('-').map(Number)
-      const [anoCheckout, mesCheckout, diaCheckout] = checkout.split('-').map(Number)
+      const [anoCheckin, mesCheckin, diaCheckin] = checkin.split("-").map(Number);
+      const [anoCheckout, mesCheckout, diaCheckout] = checkout.split("-").map(Number);
 
-      const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12)
-      const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12)
-
-      // Verificação de conflito (pode ser expandida se necessário)
-      const reservasRef = collection(db, "reservas")
-      const q = query(reservasRef, where("status", "==", "confirmado"))
-      await getDocs(q)
+      const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12);
+      const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12);
 
       await addDoc(collection(db, "reservas"), {
         checkin: Timestamp.fromDate(checkinDate),
@@ -84,11 +156,12 @@ export default function ReservaClient() {
         cpf: form.cpf,
         valorTotal,
         criadoEm: Timestamp.now(),
-      })
+        referenceId,
+      });
 
       const listaQuartosTexto = quartosSelecionados
-        .map(q => `- ${q.quantidade}x ${q.nome}`)
-        .join('\n')
+        .map((q) => `- ${q.quantidade}x ${q.nome}`)
+        .join("\n");
 
       const mensagem = `
 🔔 *Nova Reserva de Quarto*
@@ -105,16 +178,16 @@ ${listaQuartosTexto}
 📆 Check-out: ${checkout}
 📅 Diárias: ${dias}
 💰 Valor Total: R$ ${valorTotal.toFixed(2).replace(".", ",")}
-      `.trim()
+      `.trim();
 
-      const telDestino = "5531984573455"
-      const url = `https://wa.me/${telDestino}?text=${encodeURIComponent(mensagem)}`
-      window.open(url, "_blank")
+      const telDestino = "5531984573455";
+      const url = `https://wa.me/${telDestino}?text=${encodeURIComponent(mensagem)}`;
+      window.open(url, "_blank");
     } catch (error) {
-      alert("Erro ao registrar reserva. Tente novamente.")
-      console.error("Erro ao salvar reserva:", error)
+      alert("Erro ao registrar reserva. Tente novamente.");
+      console.error("Erro ao salvar reserva:", error);
     }
-  }
+  };
 
   return (
     <div className="bg-white min-h-screen">
@@ -126,31 +199,52 @@ ${listaQuartosTexto}
         <div className="grid md:grid-cols-2 gap-10">
           {/* Resumo da Reserva */}
           <div className="bg-[#fdfaf6] p-8 rounded-2xl shadow-md border border-[#e8e5df]">
-            <h2 className="text-2xl font-semibold text-[#3a3a3a] mb-6 border-b pb-3 border-[#e6e6e6]">Resumo da Reserva</h2>
+            <h2 className="text-2xl font-semibold text-[#3a3a3a] mb-6 border-b pb-3 border-[#e6e6e6]">
+              Resumo da Reserva
+            </h2>
             <ul className="space-y-3 text-gray-700 text-lg leading-relaxed">
               <li>
                 <strong>🏨 Quartos:</strong>
                 <ul className="ml-4 list-disc">
                   {quartosSelecionados.map((q, i) => (
-                    <li key={i}>{q.quantidade}x {q.nome}</li>
+                    <li key={i}>
+                      {q.quantidade}x {q.nome}
+                    </li>
                   ))}
                 </ul>
               </li>
-              <li><strong>📆 Check-in:</strong> {checkin}</li>
-              <li><strong>📆 Check-out:</strong> {checkout}</li>
-              <li><strong>👥 Adultos:</strong> {quantidadePessoas}</li>
-              <li><strong>🛏️ Diárias:</strong> {dias}</li>
+              <li>
+                <strong>📆 Check-in:</strong> {checkin}
+              </li>
+              <li>
+                <strong>📆 Check-out:</strong> {checkout}
+              </li>
+              <li>
+                <strong>👥 Adultos:</strong> {quantidadePessoas}
+              </li>
+              <li>
+                <strong>🛏️ Diárias:</strong> {dias}
+              </li>
               <li>
                 <strong>💰 Valor Total:</strong>
-                <span className="text-green-700 font-semibold"> R$ {valorTotal.toFixed(2).replace(".", ",")}</span>
+                <span className="text-green-700 font-semibold">
+                  {" "}
+                  R$ {valorTotal.toFixed(2).replace(".", ",")}
+                </span>
               </li>
             </ul>
           </div>
 
           {/* Formulário */}
           <div className="bg-[#fdfaf6] p-8 rounded-2xl shadow-md border border-[#e8e5df]">
-            <h2 className="text-2xl font-semibold text-[#3a3a3a] mb-6 border-b pb-3 border-[#e6e6e6]">Dados do Cliente</h2>
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+            <h2 className="text-2xl font-semibold text-[#3a3a3a] mb-6 border-b pb-3 border-[#e6e6e6]">
+              Dados do Cliente
+            </h2>
+            <form
+              className="space-y-5"
+              onSubmit={(e) => e.preventDefault()}
+              autoComplete="off"
+            >
               <input
                 type="text"
                 name="nome"
@@ -158,6 +252,7 @@ ${listaQuartosTexto}
                 className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 onChange={handleChange}
                 value={form.nome}
+                required
               />
               <input
                 type="tel"
@@ -166,6 +261,7 @@ ${listaQuartosTexto}
                 className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 onChange={handleChange}
                 value={form.telefone}
+                required
               />
               <input
                 type="email"
@@ -174,6 +270,7 @@ ${listaQuartosTexto}
                 className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 onChange={handleChange}
                 value={form.email}
+                required
               />
               <input
                 type="text"
@@ -182,7 +279,23 @@ ${listaQuartosTexto}
                 className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 onChange={handleChange}
                 value={form.cpf}
+                required
               />
+
+              <div>
+                <label className="font-semibold mb-2 block">
+                  Forma de Pagamento:
+                </label>
+                <select
+                  className="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                  value={formaPagamento}
+                  onChange={(e) => setFormaPagamento(e.target.value)}
+                >
+                  <option value="pix">PIX</option>
+                  <option value="credito">Cartão de Crédito</option>
+                  <option value="debito">Cartão de Débito</option>
+                </select>
+              </div>
 
               <ReCAPTCHA
                 sitekey={recaptchaSiteKey}
@@ -191,8 +304,22 @@ ${listaQuartosTexto}
 
               <button
                 type="button"
+                onClick={handlePagamento}
+                disabled={loadingPagamento}
+                className="btn-pagar cursor-pointer w-full py-4 rounded-xl font-bold text-white bg-yellow-500 hover:bg-yellow-600 transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+              >
+                {loadingPagamento ? "Processando..." : "Pagar Agora"}
+              </button>
+
+              <button
+                type="button"
+                disabled={!pagamentoConfirmado}
                 onClick={handleReservar}
-                className="btn-reservar cursor-pointer w-full py-4 rounded-xl font-bold text-black transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                className={`btn-reservar cursor-pointer w-full py-4 rounded-xl font-bold text-black transition duration-300 shadow-lg focus:outline-none focus:ring-2 ${
+                  pagamentoConfirmado
+                    ? "focus:ring-yellow-300 bg-yellow-400"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
               >
                 Confirmar Reserva via WhatsApp
               </button>
@@ -203,5 +330,5 @@ ${listaQuartosTexto}
 
       <Footer />
     </div>
-  )
+  );
 }

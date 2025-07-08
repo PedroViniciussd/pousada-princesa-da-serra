@@ -6,7 +6,7 @@ export async function POST(req) {
 
     const { nome, email, cpf, valorTotal, formaPagamento, referenceId } = body;
 
-    const response = await fetch("https://api.pagseguro.com/orders", {
+    const response = await fetch("https://sandbox.api.pagseguro.com/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

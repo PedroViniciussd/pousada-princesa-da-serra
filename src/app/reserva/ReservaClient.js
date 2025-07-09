@@ -13,7 +13,6 @@ import {
 import { db } from "../../../firebase";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import ReCAPTCHA from "react-google-recaptcha";
 
 function usePagamentoConfirmado(referenceId) {
   const [confirmado, setConfirmado] = useState(false);
@@ -40,9 +39,6 @@ export default function ReservaClient() {
   const checkout = searchParams.get("checkout");
   const quantidadePessoas = searchParams.get("pessoas");
   const quartosParam = searchParams.get("quartos");
-
-  const [captchaValido, setCaptchaValido] = useState(false);
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   const quartosSelecionados = useMemo(() => {
     try {
@@ -88,11 +84,6 @@ export default function ReservaClient() {
   };
 
   const handlePagamento = async () => {
-        if (!captchaValido) {
-      alert("Por favor, verifique o reCAPTCHA.");
-      return;
-    }
-
     if (!form.nome || !form.email || !form.cpf || !form.telefone) {
       alert("Por favor, preencha todos os dados.");
       return;
@@ -312,11 +303,6 @@ ${listaQuartosTexto}
                 </select>
               </div>
 
-                <ReCAPTCHA
-                    sitekey={recaptchaSiteKey}
-                    onChange={() => setCaptchaValido(true)}
-                />
-
               {/* Parcelas só para cartão de crédito */}
               {formaPagamento === "credito" && (
                 <div className="mt-4">
@@ -372,3 +358,5 @@ ${listaQuartosTexto}
     </div>
   );
 }
+
+

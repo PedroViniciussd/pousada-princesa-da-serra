@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 function validarCPF(cpf) {
   cpf = cpf.replace(/\D/g, "");
   if (cpf.length !== 11) return false;
-  // Elimina CPFs com todos os dígitos iguais (ex: 111.111.111-11)
   if (/^(\d)\1{10}$/.test(cpf)) return false;
 
   const calcDigito = (pos) => {
@@ -59,17 +58,9 @@ export async function POST(req) {
 
     const cpfLimpo = cpf.replace(/\D/g, "");
 
-    // Validação formato e validade real do CPF
-    if (cpfLimpo.length !== 11) {
+    if (cpfLimpo.length !== 11 || !validarCPF(cpfLimpo)) {
       return NextResponse.json(
-        { error: "CPF inválido. Deve conter 11 dígitos numéricos." },
-        { status: 400 }
-      );
-    }
-
-    if (!validarCPF(cpfLimpo)) {
-      return NextResponse.json(
-        { error: "CPF inválido. Número não corresponde a um CPF válido." },
+        { error: "CPF inválido." },
         { status: 400 }
       );
     }
@@ -95,7 +86,8 @@ export async function POST(req) {
       payment_method = { type: "DEBIT_CARD", capture: true };
     }
 
-    console.log("Enviando payload para PagSeguro:", {
+    // Corpo do pedido para o PagSeguro
+    const payload = {
       reference_id: referenceId,
       customer: {
         name: nome,
@@ -108,40 +100,33 @@ export async function POST(req) {
       notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
       payment_notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
       return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reserva/confirmar?ref=${referenceId}`,
-    });
+    };
 
-    const response = await fetch("https://api.pagseguro.com/checkouts", {
+    // Log para documentação (request)
+    console.log("📤 [PagSeguro] REQUEST Payload:\n", JSON.stringify(payload, null, 2));
+
+    const response = await fetch("https://sandbox.api.pagseguro.com/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.PAGSEGURO_TOKEN}`,
       },
-      body: JSON.stringify({
-        reference_id: referenceId,
-        customer: {
-          name: nome,
-          email: email,
-          tax_id: cpfLimpo,
-        },
-        customer_modifiable: true,
-        items,
-        payment_methods: [payment_method],
-        notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
-        payment_notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
-        return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reserva/confirmar?ref=${referenceId}`,
-      }),
+      body: JSON.stringify(payload),
     });
 
+    const responseText = await response.text();
+
+    // Log para documentação (response)
+    console.log("📥 [PagSeguro] RESPONSE:\n", responseText);
+
     if (!response.ok) {
-      const text = await response.text();
-      console.error("❌ Erro no PagSeguro (RAW):", text);
       return NextResponse.json(
-        { error: "Erro na resposta do PagSeguro", detalhes: text },
+        { error: "Erro na resposta do PagSeguro", detalhes: responseText },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
 
     const payLinkObj = data.links?.find((link) => link.rel === "PAY");
     const payLink = payLinkObj ? payLinkObj.href : null;

@@ -65,7 +65,7 @@ export async function POST(req) {
       };
     }
 
-    const response = await fetch("https://sandbox.api.pagseguro.com/checkouts", {
+    const response = await fetch("https://api.pagseguro.com/checkouts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

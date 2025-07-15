@@ -107,7 +107,7 @@ export async function POST(req) {
       payment_methods: [payment_method],
       notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
       payment_notification_urls: [`${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`],
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reserva?success=true&ref=${referenceId}`,
+      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reserva/confirmar?ref=${referenceId}`,
     });
 
     const response = await fetch("https://sandbox.api.pagseguro.com/checkouts", {

@@ -9,6 +9,9 @@ import {
   onSnapshot,
   addDoc,
   Timestamp,
+  doc,
+  updateDoc,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../../firebase";
 import Header from "../../components/Header";
@@ -20,10 +23,14 @@ function usePagamentoConfirmado(referenceId) {
   useEffect(() => {
     if (!referenceId) return;
 
-    const pagamentosRef = collection(db, "pagamentosConfirmados");
-    const q = query(pagamentosRef, where("referenceId", "==", referenceId));
+    const reservasRef = collection(db, "reservas");
+    const q = query(reservasRef, where("referenceId", "==", referenceId));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setConfirmado(!snapshot.empty);
+      const reserva = snapshot.docs[0]?.data();
+      if (reserva?.status === "confirmado") {
+        setConfirmado(true);
+      }
     });
 
     return () => unsubscribe();
@@ -39,6 +46,7 @@ export default function ReservaClient() {
   const checkout = searchParams.get("checkout");
   const quantidadePessoas = searchParams.get("pessoas");
   const quartosParam = searchParams.get("quartos");
+  const refParam = searchParams.get("ref");
 
   const quartosSelecionados = useMemo(() => {
     try {
@@ -64,8 +72,7 @@ export default function ReservaClient() {
     }, 0);
   }, [quartosSelecionados, dias]);
 
-  const [referenceId] = useState(() => Date.now().toString());
-
+  const [referenceId] = useState(() => refParam || Date.now().toString());
   const pagamentoConfirmado = usePagamentoConfirmado(referenceId);
 
   const [formaPagamento, setFormaPagamento] = useState("pix");
@@ -83,6 +90,31 @@ export default function ReservaClient() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const salvarReservaPendente = async () => {
+    const [anoCheckin, mesCheckin, diaCheckin] = checkin.split("-").map(Number);
+    const [anoCheckout, mesCheckout, diaCheckout] = checkout
+      .split("-")
+      .map(Number);
+
+    const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12);
+    const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12);
+
+    await addDoc(collection(db, "reservas"), {
+      checkin: Timestamp.fromDate(checkinDate),
+      checkout: Timestamp.fromDate(checkoutDate),
+      quantidadePessoas: Number(quantidadePessoas),
+      quartos: quartosSelecionados,
+      status: "pendente",
+      nome: form.nome,
+      telefone: form.telefone,
+      email: form.email,
+      cpf: form.cpf,
+      valorTotal,
+      criadoEm: Timestamp.now(),
+      referenceId,
+    });
+  };
+
   const handlePagamento = async () => {
     if (!form.nome || !form.email || !form.cpf || !form.telefone) {
       alert("Por favor, preencha todos os dados.");
@@ -91,6 +123,8 @@ export default function ReservaClient() {
 
     setLoadingPagamento(true);
     try {
+      await salvarReservaPendente();
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +149,7 @@ export default function ReservaClient() {
       }
 
       if (data.url) {
-        window.location.href = data.url;
+        window.open(data.url, "_blank");
       } else if (data.qr_code) {
         window.open(data.qr_code, "_blank");
       } else {
@@ -132,41 +166,15 @@ export default function ReservaClient() {
 
   const handleReservar = async () => {
     if (!pagamentoConfirmado) {
-      alert(
-        "Aguarde a confirmação do pagamento para prosseguir com a reserva."
-      );
+      alert("Aguarde a confirmação do pagamento para prosseguir com a reserva.");
       return;
     }
 
-    try {
-      const [anoCheckin, mesCheckin, diaCheckin] = checkin.split("-").map(Number);
-      const [anoCheckout, mesCheckout, diaCheckout] = checkout
-        .split("-")
-        .map(Number);
+    const listaQuartosTexto = quartosSelecionados
+      .map((q) => `- ${q.quantidade}x ${q.nome}`)
+      .join("\n");
 
-      const checkinDate = new Date(anoCheckin, mesCheckin - 1, diaCheckin, 12);
-      const checkoutDate = new Date(anoCheckout, mesCheckout - 1, diaCheckout, 12);
-
-      await addDoc(collection(db, "reservas"), {
-        checkin: Timestamp.fromDate(checkinDate),
-        checkout: Timestamp.fromDate(checkoutDate),
-        quantidadePessoas: Number(quantidadePessoas),
-        quartos: quartosSelecionados,
-        status: "confirmado",
-        nome: form.nome,
-        telefone: form.telefone,
-        email: form.email,
-        cpf: form.cpf,
-        valorTotal,
-        criadoEm: Timestamp.now(),
-        referenceId,
-      });
-
-      const listaQuartosTexto = quartosSelecionados
-        .map((q) => `- ${q.quantidade}x ${q.nome}`)
-        .join("\n");
-
-      const mensagem = `
+    const mensagem = `
 🔔 *Nova Reserva de Quarto*
 
 👤 Nome: ${form.nome}
@@ -181,15 +189,11 @@ ${listaQuartosTexto}
 📆 Check-out: ${checkout}
 📅 Diárias: ${dias}
 💰 Valor Total: R$ ${valorTotal.toFixed(2).replace(".", ",")}
-      `.trim();
+    `.trim();
 
-      const telDestino = "5531984573455";
-      const url = `https://wa.me/${telDestino}?text=${encodeURIComponent(mensagem)}`;
-      window.open(url, "_blank");
-    } catch (error) {
-      alert("Erro ao registrar reserva. Tente novamente.");
-      console.error("Erro ao salvar reserva:", error);
-    }
+    const telDestino = "5531984573455";
+    const url = `https://wa.me/${telDestino}?text=${encodeURIComponent(mensagem)}`;
+    window.open(url, "_blank");
   };
 
   return (
@@ -216,22 +220,13 @@ ${listaQuartosTexto}
                   ))}
                 </ul>
               </li>
+              <li><strong>📆 Check-in:</strong> {checkin}</li>
+              <li><strong>📆 Check-out:</strong> {checkout}</li>
+              <li><strong>👥 Adultos:</strong> {quantidadePessoas}</li>
+              <li><strong>🛏️ Diárias:</strong> {dias}</li>
               <li>
-                <strong>📆 Check-in:</strong> {checkin}
-              </li>
-              <li>
-                <strong>📆 Check-out:</strong> {checkout}
-              </li>
-              <li>
-                <strong>👥 Adultos:</strong> {quantidadePessoas}
-              </li>
-              <li>
-                <strong>🛏️ Diárias:</strong> {dias}
-              </li>
-              <li>
-                <strong>💰 Valor Total:</strong>
+                <strong>💰 Valor Total:</strong>{" "}
                 <span className="text-green-700 font-semibold">
-                  {" "}
                   R$ {valorTotal.toFixed(2).replace(".", ",")}
                 </span>
               </li>
@@ -243,54 +238,16 @@ ${listaQuartosTexto}
             <h2 className="text-2xl font-semibold text-[#3a3a3a] mb-6 border-b pb-3 border-[#e6e6e6]">
               Dados do Cliente
             </h2>
-            <form
-              className="space-y-5"
-              onSubmit={(e) => e.preventDefault()}
-              autoComplete="off"
-            >
-              <input
-                type="text"
-                name="nome"
-                placeholder="Nome completo"
-                className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                onChange={handleChange}
-                value={form.nome}
-                required
-              />
-              <input
-                type="tel"
-                name="telefone"
-                placeholder="Telefone / WhatsApp"
-                className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                onChange={handleChange}
-                value={form.telefone}
-                required
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="E-mail"
-                className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                onChange={handleChange}
-                value={form.email}
-                required
-              />
-              <input
-                type="text"
-                name="cpf"
-                placeholder="CPF"
-                className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                onChange={handleChange}
-                value={form.cpf}
-                required
-              />
+            <form className="space-y-5" onSubmit={(e) => e.preventDefault()} autoComplete="off">
+              <input type="text" name="nome" placeholder="Nome completo" className="w-full p-4 border border-gray-300 rounded-xl" onChange={handleChange} value={form.nome} required />
+              <input type="tel" name="telefone" placeholder="Telefone / WhatsApp" className="w-full p-4 border border-gray-300 rounded-xl" onChange={handleChange} value={form.telefone} required />
+              <input type="email" name="email" placeholder="E-mail" className="w-full p-4 border border-gray-300 rounded-xl" onChange={handleChange} value={form.email} required />
+              <input type="text" name="cpf" placeholder="CPF" className="w-full p-4 border border-gray-300 rounded-xl" onChange={handleChange} value={form.cpf} required />
 
               <div>
-                <label className="font-semibold mb-2 block">
-                  Forma de Pagamento:
-                </label>
+                <label className="font-semibold mb-2 block">Forma de Pagamento:</label>
                 <select
-                  className="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                  className="w-full p-3 border border-gray-300 rounded-xl"
                   value={formaPagamento}
                   onChange={(e) => {
                     setFormaPagamento(e.target.value);
@@ -303,14 +260,11 @@ ${listaQuartosTexto}
                 </select>
               </div>
 
-              {/* Parcelas só para cartão de crédito */}
               {formaPagamento === "credito" && (
                 <div className="mt-4">
-                  <label className="font-semibold mb-2 block">
-                    Parcelas (máx {dias}x):
-                  </label>
+                  <label className="font-semibold mb-2 block">Parcelas (máx {dias}x):</label>
                   <select
-                    className="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-xl"
                     value={parcelas}
                     onChange={(e) => setParcelas(Number(e.target.value))}
                   >
@@ -323,25 +277,11 @@ ${listaQuartosTexto}
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handlePagamento}
-                disabled={loadingPagamento}
-                className="btn-pagar cursor-pointer w-full py-4 rounded-xl font-bold text-white bg-yellow-500 hover:bg-yellow-600 transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
-              >
+              <button type="button" onClick={handlePagamento} disabled={loadingPagamento} className="w-full py-4 rounded-xl font-bold text-white bg-yellow-500 hover:bg-yellow-600">
                 {loadingPagamento ? "Processando..." : "Gerar Pagamento"}
               </button>
 
-              <button
-                type="button"
-                onClick={handleReservar}
-                disabled={!pagamentoConfirmado}
-                className={`mt-4 w-full py-4 rounded-xl font-bold text-white ${
-                  pagamentoConfirmado
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-gray-400 cursor-not-allowed"
-                } transition duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400`}
-              >
+              <button type="button" onClick={handleReservar} disabled={!pagamentoConfirmado} className={`mt-4 w-full py-4 rounded-xl font-bold text-white ${pagamentoConfirmado ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}>
                 Finalizar Reserva
               </button>
               {!pagamentoConfirmado && (
@@ -358,5 +298,3 @@ ${listaQuartosTexto}
     </div>
   );
 }
-
-

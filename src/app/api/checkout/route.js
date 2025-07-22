@@ -105,7 +105,8 @@ export async function POST(req) {
     // Log para documentação (request)
     console.log("📤 [PagSeguro] REQUEST Payload:\n", JSON.stringify(payload, null, 2));
 
-    const response = await fetch("https://sandbox.api.pagseguro.com/checkouts", {
+    const response = await fetch("https://api.pagseguro.com/checkouts", {
+
       method: "POST",
       headers: {
         "Content-Type": "application/json",

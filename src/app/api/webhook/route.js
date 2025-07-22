@@ -35,7 +35,7 @@ export async function POST(req) {
 
     // Define novo status baseado no evento
     let novoStatus = null;
-    if (event === "ORDER.PAID") {
+   if (event === "CHECKOUT.ORDER.PAID" || event === "ORDER.PAID") {
       novoStatus = "confirmado";
     } else if (event === "ORDER.CANCELED") {
       novoStatus = "cancelado";

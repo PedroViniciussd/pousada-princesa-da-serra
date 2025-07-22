@@ -13,13 +13,14 @@ import {
 export async function POST(req) {
   try {
     const body = await req.json();
+    console.log("Webhook recebido:", JSON.stringify(body));
 
-    // Exemplo do evento: "ORDER.PAID", "ORDER.CANCELED"
     const event = body?.event;
     const data = body?.data || {};
     const referenceId = data.reference_id;
 
     if (!event || !referenceId) {
+      console.error("Payload inválido no webhook:", body);
       return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
     }
 

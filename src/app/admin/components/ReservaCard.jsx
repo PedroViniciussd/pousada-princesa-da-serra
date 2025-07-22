@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 
 export default function ReservaCard({ titulo, reservas }) {
@@ -54,6 +54,19 @@ export default function ReservaCard({ titulo, reservas }) {
         } catch (error) {
             console.error('Erro ao cancelar reserva:', error);
             alert('Erro ao cancelar a reserva. Tente novamente.');
+        }
+    };
+
+    const handleConfirmar = async (reservaId) => {
+        try {
+            await updateDoc(doc(db, 'reservas', reservaId), {
+                status: 'confirmada'
+            });
+            alert('Reserva confirmada com sucesso!');
+            window.location.reload();
+        } catch (error) {
+            console.error('Erro ao confirmar reserva:', error);
+            alert('Erro ao confirmar a reserva. Tente novamente.');
         }
     };
 
@@ -151,7 +164,7 @@ export default function ReservaCard({ titulo, reservas }) {
                                     <p><strong>Cancelado em:</strong> {format(canceladoEm, "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                                 )}
 
-                                <div className="flex gap-4 mt-4">
+                                <div className="flex flex-wrap gap-4 mt-4">
                                     <a
                                         href={`https://wa.me/55${numeroWhatsApp}`}
                                         target="_blank"
@@ -160,6 +173,15 @@ export default function ReservaCard({ titulo, reservas }) {
                                     >
                                         WhatsApp
                                     </a>
+
+                                    {reserva.status === 'pendente' && (
+                                        <button
+                                            onClick={() => handleConfirmar(reserva.id)}
+                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                                        >
+                                            Confirmar Reserva
+                                        </button>
+                                    )}
 
                                     {reserva.status !== 'cancelado' && (
                                         <button

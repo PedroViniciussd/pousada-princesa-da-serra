@@ -6,13 +6,14 @@ import '../../custom-datepicker.css'
 
 export default function BuscarQuartosDisponiveis() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    checkin: '',
-    checkout: '',
-    pessoas: '', // inicializa como string vazia
-    criancas: '',
-    camas: '',
-  })
+const [formData, setFormData] = useState({
+  checkin: '',
+  checkout: '',
+  pessoas: '1',   // valor inicial como "1"
+  criancas: '',
+  camas: '1',     // valor inicial como "1"
+})
+
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -107,41 +108,90 @@ export default function BuscarQuartosDisponiveis() {
           />
         </div>
 
-        {/* Hóspedes */}
-        <div className="flex flex-col col-span-1">
-          <label htmlFor="pessoas" className="mb-2 font-semibold capitalize">
-            Hóspedes
-          </label>
-          <input
-            type="number"
-            id="pessoas"
-            name="pessoas"
-            min="1"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="Ex: 2"
-            value={formData.pessoas}
-            onChange={handleChange}
-            className="bg-transparent border border-[#FFD675] rounded-md px-4 py-2 text-pousadaYellow placeholder-pousadaYellow/70 focus:outline-none focus:ring-2 focus:ring-[#FFD675] focus:border-[#FFD675] transition"
-          />
-        </div>
+     {/* Hóspedes */}
+<div className="flex flex-col col-span-1">
+  <label htmlFor="pessoas" className="mb-2 font-semibold capitalize">
+    Hóspedes
+  </label>
+  <div className="flex items-center border border-[#FFD675] rounded-md overflow-hidden">
+    <button
+      type="button"
+      onClick={() =>
+        setFormData((prev) => ({
+          ...prev,
+          pessoas: Math.max(1, parseInt(prev.pessoas || '1') - 1).toString(),
+        }))
+      }
+      className="px-3 py-2 text-xl text-white hover:bg-[#FFD675]/20 transition"
+    >
+      –
+    </button>
+    <input
+      type="number"
+      id="pessoas"
+      name="pessoas"
+      min="1"
+      value={formData.pessoas}
+      onChange={handleChange}
+      className="w-full text-center bg-transparent py-2 text-pousadaYellow focus:outline-none"
+    />
+    <button
+      type="button"
+      onClick={() =>
+        setFormData((prev) => ({
+          ...prev,
+          pessoas: (parseInt(prev.pessoas || '1') + 1).toString(),
+        }))
+      }
+      className="px-3 py-2 text-xl text-white hover:bg-[#FFD675]/20 transition"
+    >
+      +
+    </button>
+  </div>
+</div>
 
-        {/* Camas */}
-        <div className="flex flex-col col-span-1">
-          <label htmlFor="camas" className="mb-2 font-semibold capitalize">
-            Camas
-          </label>
-          <input
-            type="number"
-            id="camas"
-            name="camas"
-            min="0"
-            placeholder="Ex: 1"
-            value={formData.camas}
-            onChange={handleChange}
-            className="bg-transparent border border-[#FFD675] rounded-md px-4 py-2 text-pousadaYellow placeholder-pousadaYellow/70 focus:outline-none focus:ring-2 focus:ring-[#FFD675] focus:border-[#FFD675] transition"
-          />
-        </div>
+{/* Camas */}
+<div className="flex flex-col col-span-1">
+  <label htmlFor="camas" className="mb-2 font-semibold capitalize">
+    Camas
+  </label>
+  <div className="flex items-center border border-[#FFD675] rounded-md overflow-hidden">
+    <button
+      type="button"
+      onClick={() =>
+        setFormData((prev) => ({
+          ...prev,
+          camas: Math.max(1, parseInt(prev.camas || '1') - 1).toString(),
+        }))
+      }
+      className="px-3 py-2 text-xl text-white hover:bg-[#FFD675]/20 transition"
+    >
+      –
+    </button>
+    <input
+      type="number"
+      id="camas"
+      name="camas"
+      min="1"
+      value={formData.camas}
+      onChange={handleChange}
+      className="w-full text-center bg-transparent py-2 text-pousadaYellow focus:outline-none"
+    />
+    <button
+      type="button"
+      onClick={() =>
+        setFormData((prev) => ({
+          ...prev,
+          camas: (parseInt(prev.camas || '1') + 1).toString(),
+        }))
+      }
+      className="px-3 py-2 text-xl text-white hover:bg-[#FFD675]/20 transition"
+    >
+      +
+    </button>
+  </div>
+</div>
+
 
         {/* Botão */}
         <div className="col-span-1 sm:col-span-2">

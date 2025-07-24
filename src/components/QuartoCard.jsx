@@ -56,16 +56,14 @@ export default function QuartoCard({ quarto, onSelect }) {
                 onClick={() => setModalAberto(true)}
             >
                 <div
-                    className={`absolute top-2 left-2 z-20 text-sm font-semibold px-2 py-1 rounded ${quarto.disponibilidade > 0
-                            ? 'bg-black/60 text-white'
-                            : 'bg-red-500 text-black'
-                        }`}
+                    className={`absolute top-2 left-2 z-20 text-sm font-semibold px-2 py-1 rounded ${
+                        quarto.disponibilidade > 0 ? 'bg-black/60 text-white' : 'bg-red-500 text-black'
+                    }`}
                 >
                     {quarto.disponibilidade > 0
                         ? `${quarto.disponibilidade} disponíveis`
                         : 'ESGOTADO'}
                 </div>
-
 
                 <div className="relative w-full h-48">
                     <img src={imagemDestaque} alt={quarto.nome} className="w-full h-full object-cover" />
@@ -82,7 +80,9 @@ export default function QuartoCard({ quarto, onSelect }) {
                         <IconPeople />
                         <span className="mr-4">{quarto.capacidade} hóspedes</span>
                         <IconBed />
-                        <span>{quarto.cama} {quarto.cama === 1 ? 'cama' : 'camas'}</span>
+                        <span>
+                            {quarto.cama} {quarto.cama === 1 ? 'cama' : 'camas'}
+                        </span>
                     </div>
                     <p className="text-gray-700 text-sm mb-2">
                         {quarto.descricao?.length > 145
@@ -90,21 +90,59 @@ export default function QuartoCard({ quarto, onSelect }) {
                             : quarto.descricao || 'Descrição indisponível'}
                     </p>
 
+                    {/* Aqui está o input com os botões de - e + */}
                     <div className="flex items-center gap-2 mt-3">
                         <label htmlFor={`quantidade-${quarto.id}`} className="text-sm font-medium">
                             Selecionar:
                         </label>
-                        <input
-                            id={`quantidade-${quarto.id}`}
-                            type="number"
-                            min={0}
-                            max={quarto.disponibilidade}
-                            value={quantidade}
-                            onChange={handleChange}
-                            className="w-16 px-2 py-1 border rounded"
-                            disabled={quarto.disponibilidade === 0}
-                            onClick={(e) => e.stopPropagation()} // impede abertura do modal
-                        />
+                        <div className="flex items-center border rounded">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setQuantidade((q) => {
+                                        const nova = Math.max(0, q - 1)
+                                        onSelect(nova)
+                                        return nova
+                                    })
+                                }}
+                                disabled={quantidade <= 0}
+                                className="px-2 py-1 bg-[#FFD675] text-black rounded-l hover:bg-[#d4b85a] disabled:opacity-50"
+                            >
+                                –
+                            </button>
+                            <input
+                                id={`quantidade-${quarto.id}`}
+                                type="number"
+                                min={0}
+                                max={quarto.disponibilidade}
+                                value={quantidade}
+                                onChange={(e) => {
+                                    e.stopPropagation()
+                                    const val = Math.min(quarto.disponibilidade, Math.max(0, Number(e.target.value)))
+                                    setQuantidade(val)
+                                    onSelect(val)
+                                }}
+                                className="w-16 text-center border-x px-2 py-1"
+                                disabled={quarto.disponibilidade === 0}
+                                onClick={(e) => e.stopPropagation()} // impede abertura do modal
+                            />
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setQuantidade((q) => {
+                                        const nova = Math.min(quarto.disponibilidade, q + 1)
+                                        onSelect(nova)
+                                        return nova
+                                    })
+                                }}
+                                disabled={quantidade >= quarto.disponibilidade}
+                                className="px-2 py-1 bg-[#FFD675] text-black rounded-r hover:bg-[#d4b85a] disabled:opacity-50"
+                            >
+                                +
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,8 +176,9 @@ export default function QuartoCard({ quarto, onSelect }) {
                                 )}
                             </div>
 
-                            <p className="text-gray-700 mb-6 whitespace-pre-line">{quarto.descricao || 'Descrição indisponível'}</p>
-
+                            <p className="text-gray-700 mb-6 whitespace-pre-line">
+                                {quarto.descricao || 'Descrição indisponível'}
+                            </p>
                         </div>
                     </div>
                 </div>

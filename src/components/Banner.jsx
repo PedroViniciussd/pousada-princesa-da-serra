@@ -7,7 +7,7 @@ export default function Banner() {
         <section
             className="relative w-full bg-cover bg-center py-12 sm:py-20"
             style={{
-                backgroundImage: "url('/images/princesadaserra.jpg')",
+                backgroundImage: "url('/images/banner-pousadaprincesadaserra.jpg')",
                 // Removi a altura fixa para ajustar ao conteúdo
             }}
         >

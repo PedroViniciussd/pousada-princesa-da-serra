@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin/login
+Disallow: /reserva
+Disallow: /reserva/confirmar
+
+Allow: /
+
+Sitemap: https://www.pousadaprincesadaserra.com.br/sitemap.xml

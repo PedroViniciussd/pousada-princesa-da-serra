@@ -11,7 +11,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-
 export const metadata = {
   title: "Pousada Princesa da Serra",
   description:
@@ -37,25 +36,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
-      <head>
-        <title>{metadata.title}</title>
-        <meta name="description" content={metadata.description} />
-        <meta name="keywords" content={metadata.keywords.join(", ")} />
-        <meta name="author" content="Kinkajou dev - instagram.com/kinkajou_dev" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
-
-        {/* Open Graph */}
-        <meta property="og:title" content={metadata.openGraph.title} />
-        <meta property="og:description" content={metadata.openGraph.description} />
-        <meta property="og:type" content={metadata.openGraph.type} />
-        <meta property="og:locale" content={metadata.openGraph.locale} />
-        <meta property="og:site_name" content={metadata.openGraph.siteName} />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-white text-gray-900`}
-      >
+    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="min-h-screen bg-white text-gray-900">
         {children}
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
       </body>

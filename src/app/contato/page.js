@@ -28,7 +28,7 @@ export default function Contato() {
 
     // Opções do EmailJS
     const serviceID = 'service_3ij7ogj'
-    const templateID = 'template_b8f8nmp'
+    const templateID = 'template_5xosa8l'
     const publicKey = 'I3Re6s1rb7wpBkIGc'
 
     try {

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "date-fns": "^4.1.0",
     "firebase": "^11.9.0",
     "framer-motion": "^12.16.0",
